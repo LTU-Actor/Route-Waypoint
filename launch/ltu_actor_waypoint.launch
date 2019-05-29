@@ -1,0 +1,20 @@
+<launch>
+
+    <!-- declare arg to be passed in -->
+    <arg name="accumulate" default="0.0" />
+    <arg name="mult_accumulate" default="0.0" />
+    <arg name="mult" default="0.5" />
+    <arg name="speed" default="1.5" />
+    <arg name="reverse" default="false" />
+
+    <!-- read value of arg -->
+
+    <node name="waypoint" pkg="ltu_actor_waypoint" type="waypoint">
+        <param name="accumulate" value="$(arg accumulate)"/>
+        <param name="mult_accumulate" value="$(arg mult_accumulate)"/>
+        <param name="mult" value="$(arg mult)"/>
+        <param name="speed" value="$(arg speed)"/>
+        <param name="reverse" value="$(arg reverse)"/>
+    </node>
+
+</launch>
