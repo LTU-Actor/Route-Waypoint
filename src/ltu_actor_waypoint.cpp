@@ -10,6 +10,8 @@
 #include <array>
 #include <bitset>
 
+#define NODE_NAME "ltu_actor_waypoint"
+
 #define WATCH(x) ROS_ERROR_STREAM(#x << ": " << x);
 
 /* Class TwistNode
@@ -20,8 +22,9 @@ public:
     void run();
 
 private:
-    void gpsCallback(const sensor_msgs::NavSatFix::ConstPtr &msg);
-    void gpsVelnedCallback(const piksi_rtk_msgs::VelNed::ConstPtr &msg);
+    void gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
+    void waypointCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
+    void gpsVelnedCallback(const piksi_rtk_msgs::VelNed::ConstPtr& msg);
 
     ros::NodeHandle    nh;
     ros::ServiceServer service;
@@ -81,7 +84,7 @@ GotoWaypoint::GotoWaypoint()
     gps_velned_sub  = nh.subscribe<piksi_rtk_msgs::VelNed>(gps_vel_ned_topic, 4, &GotoWaypoint::gpsVelnedCallback, this);
 
     // Local
-    waypoint_sub    = nh.subscribe<NavSatFix>("waypoint", 4, &GotoWaypoint::waypointCallback, this);
+    waypoint_sub    = nh.subscribe<sensor_msgs::NavSatFix>("waypoint", 4, &GotoWaypoint::waypointCallback, this);
     debug_angle_pub = nh.advertise<std_msgs::Float64>("debug_angle", 1);
 
     gps_fix.status.status = -1; // NO FIX
@@ -102,14 +105,13 @@ void GotoWaypoint::run()
 
         if (gps_fix.status.status == -1)
         {
-            if (counter % 50 == 0) ROS_ERROR_STREAM(NODE_NAME_GPSF << ": No GPS Fix!");
+            if (counter % 50 == 0) ROS_ERROR_STREAM(NODE_NAME << ": No GPS Fix!");
         }
         else if (gps_velned.n_sats < 2)
         {
-            if (counter % 50 == 0) ROS_ERROR_STREAM(NODE_NAME_GPSF
-                             << ": Bad vel_ned (not enogh sats)!");
+            if (counter % 50 == 0) ROS_ERROR_STREAM(NODE_NAME << ": Bad vel_ned (not enough sats)!");
         }
-        else if (enabled)
+        else
         {
             float diff_lat, diff_lon, curr_lat, curr_lon;
 
@@ -178,23 +180,23 @@ void GotoWaypoint::run()
     }
 }
 
-void GotoWaypoint::gpsCallback(const sensor_msgs::NavSatFix &msg)
+void GotoWaypoint::gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& msg)
 {
-    gps_fix = msg;
+    gps_fix = *msg;
 }
 
-void GotoWaypoint::waypointCallback(const sensor_msgs::NavSatFix& msg)
+void GotoWaypoint::waypointCallback(const sensor_msgs::NavSatFix::ConstPtr& msg)
 {
-    target = msg;
+    target = *msg;
 }
 
-void GotoWaypoint::gpsVelnedCallback(const piksi_rtk_msgs::VelNed& msg)
+void GotoWaypoint::gpsVelnedCallback(const piksi_rtk_msgs::VelNed::ConstPtr& msg)
 {
-    gps_velned = msg;
+    gps_velned = *msg;
 }
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "ltu_actor_waypoint");
+    ros::init(argc, argv, NODE_NAME);
     GotoWaypoint().run();
 }
