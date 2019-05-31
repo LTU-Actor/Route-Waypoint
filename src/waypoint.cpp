@@ -10,12 +10,9 @@
 #include <array>
 #include <bitset>
 
-#define NODE_NAME "ltu_actor_waypoint"
-
+#define NODE_NAME "waypoint"
 #define WATCH(x) ROS_ERROR_STREAM(#x << ": " << x);
 
-/* Class TwistNode
- */
 class GotoWaypoint {
 public:
     GotoWaypoint();
@@ -67,8 +64,8 @@ GotoWaypoint::GotoWaypoint()
         ROS_ERROR_STREAM("Route-Waypoint: parameter '" << param << "' not defined."); exit(0); }
 
     // Load all rosparams
-    LOAD_PARAM_TO_STRING("gps_fix", gps_fix_topic); // /piksi/navsatfix_best_fix
-    LOAD_PARAM_TO_STRING("gps_vel_ned", gps_vel_ned_topic); // /piksi/vel_ned
+    LOAD_PARAM_TO_STRING("gps_fix", gps_fix_topic);
+    LOAD_PARAM_TO_STRING("gps_vel_ned", gps_vel_ned_topic);
 
 #undef LOAD_PARAM_TO_STRING
 
@@ -86,31 +83,24 @@ GotoWaypoint::GotoWaypoint()
     // Local
     waypoint_sub    = nh.subscribe<sensor_msgs::NavSatFix>("waypoint", 4, &GotoWaypoint::waypointCallback, this);
     debug_angle_pub = nh.advertise<std_msgs::Float64>("debug_angle", 1);
+    twist_pub = nh.advertise<geometry_msgs::Twist>("cmd", 1);
 
     gps_fix.status.status = -1; // NO FIX
 }
 
 void GotoWaypoint::run()
 {
-    static unsigned int counter = 0;
     while (ros::ok())
     {
-        counter++;
-
         ros::spinOnce();
         geometry_msgs::Twist command;
         std_msgs::Float64 angle_msg;
         command.linear.x = speed;
 
-
         if (gps_fix.status.status == -1)
-        {
-            if (counter % 50 == 0) ROS_ERROR_STREAM(NODE_NAME << ": No GPS Fix!");
-        }
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME ": No GPS Fix!");
         else if (gps_velned.n_sats < 2)
-        {
-            if (counter % 50 == 0) ROS_ERROR_STREAM(NODE_NAME << ": Bad vel_ned (not enough sats)!");
-        }
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME ": Bad vel_ned (not enough sats)!");
         else
         {
             float diff_lat, diff_lon, curr_lat, curr_lon;
@@ -123,7 +113,6 @@ void GotoWaypoint::run()
             curr_lat = gps_velned.n;
             curr_lon = gps_velned.e;
 
-
             // normalize
             float dist = std::sqrt(diff_lat * diff_lat + diff_lon * diff_lon);
             diff_lat /= dist;
@@ -134,8 +123,6 @@ void GotoWaypoint::run()
             curr_lon /= speed;
 
             float velned_angle = atan2(curr_lat, curr_lon);
-            //WATCH(accumulate);
-            //WATCH(mult_accumulate);
 
             // https://stackoverflow.com/a/21486462
             // atan2(2DCross(A,B), 2DDot(A,B));
@@ -155,24 +142,20 @@ void GotoWaypoint::run()
             if (accumulate > 0.1) accumulate = 0.1;
             else if (accumulate < -0.1) accumulate = -0.1;
 
-            command.angular.z = speed > 500 ? angle * mult : 0; 
+            command.angular.z = speed > 500 ? angle * mult : 0;
 
             if (!std::isnan(accumulate))
                 command.angular.z += accumulate;
-
-            //ROS_ERROR_STREAM("accumulate: " << accumulate << "\nangle: " << angle << "\nspeed: " << speed << "\nvelnedangle: " << velned_angle);
 
             float scale = dist * 4503.0f;
             scale *= scale;
 
             if (std::abs(command.angular.z) > scale)
-            {
                 command.angular.z = copysignf(scale, command.angular.z);
-            }
 
             if (reverse) command.angular.z *= -1;
 
-            if (twist_pub.getNumSubscribers() > 0) twist_pub.publish(command);
+            twist_pub.publish(command);
             debug_angle_pub.publish(angle_msg);
         }
 
@@ -180,20 +163,9 @@ void GotoWaypoint::run()
     }
 }
 
-void GotoWaypoint::gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& msg)
-{
-    gps_fix = *msg;
-}
-
-void GotoWaypoint::waypointCallback(const sensor_msgs::NavSatFix::ConstPtr& msg)
-{
-    target = *msg;
-}
-
-void GotoWaypoint::gpsVelnedCallback(const piksi_rtk_msgs::VelNed::ConstPtr& msg)
-{
-    gps_velned = *msg;
-}
+void GotoWaypoint::gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) { gps_fix = *msg; }
+void GotoWaypoint::waypointCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) { target = *msg; }
+void GotoWaypoint::gpsVelnedCallback(const piksi_rtk_msgs::VelNed::ConstPtr& msg) { gps_velned = *msg; }
 
 int main(int argc, char **argv)
 {
