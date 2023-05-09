@@ -1,9 +1,10 @@
 #include <cfloat>
 #include <cmath>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Vector3Stamped.h>
 #include <std_msgs/Float64.h>
 #include <math.h>
-#include <piksi_rtk_msgs/VelNed.h>
+#include <piksi_rtk_msgs/ReceiverState_V2_6_5.h>
 #include <ros/ros.h>
 #include <sensor_msgs/NavSatFix.h>
 #include <string>
@@ -21,12 +22,14 @@ public:
 private:
     void gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void waypointCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
-    void gpsVelnedCallback(const piksi_rtk_msgs::VelNed::ConstPtr& msg);
+    void gpsStateCallback(const piksi_rtk_msgs::ReceiverState_V2_6_5::ConstPtr& msg);
+    void gpsVelnedCallback(const geometry_msgs::Vector3Stamped::ConstPtr& msg);
 
     ros::NodeHandle    nh;
     ros::ServiceServer service;
 
     ros::Subscriber    gps_sub;
+    // ros::Subscriber    gps_state_sub;
     ros::Subscriber    gps_velned_sub;
     ros::Subscriber    waypoint_sub;
 
@@ -34,7 +37,8 @@ private:
     ros::Publisher     debug_angle_pub;
 
     sensor_msgs::NavSatFix gps_fix;
-    piksi_rtk_msgs::VelNed gps_velned;
+    piksi_rtk_msgs::ReceiverState_V2_6_5 gps_state;
+    geometry_msgs::Vector3Stamped gps_velned;
 
     sensor_msgs::NavSatFix target;
 
@@ -65,6 +69,7 @@ GotoWaypoint::GotoWaypoint()
 
     // Load all rosparams
     LOAD_PARAM_TO_STRING("gps_fix", gps_fix_topic);
+    LOAD_PARAM_TO_STRING("gps_state", gps_state_topic);
     LOAD_PARAM_TO_STRING("gps_vel_ned", gps_vel_ned_topic);
 
 #undef LOAD_PARAM_TO_STRING
@@ -78,7 +83,8 @@ GotoWaypoint::GotoWaypoint()
 
     // Global
     gps_sub         = nh.subscribe<sensor_msgs::NavSatFix>(gps_fix_topic,  4, &GotoWaypoint::gpsCallback, this);
-    gps_velned_sub  = nh.subscribe<piksi_rtk_msgs::VelNed>(gps_vel_ned_topic, 4, &GotoWaypoint::gpsVelnedCallback, this);
+    // gps_state       = nh.subscribe<piksi_rtk_msgs::ReceiverState_V2_6_5>(gps_state_topic,  4, &GotoWaypoint::gpsStateCallback, this);
+    gps_velned_sub  = nh.subscribe<geometry_msgs::Vector3Stamped>(gps_vel_ned_topic, 4, &GotoWaypoint::gpsVelnedCallback, this);
 
     // Local
     waypoint_sub    = nh.subscribe<sensor_msgs::NavSatFix>("waypoint", 4, &GotoWaypoint::waypointCallback, this);
@@ -99,8 +105,8 @@ void GotoWaypoint::run()
 
         if (gps_fix.status.status == -1)
             ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME ": No GPS Fix!");
-        else if (gps_velned.n_sats < 2)
-            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME ": Bad vel_ned (not enough sats)!");
+        // else if (gps_state.num_sat < 2)
+        //     ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME ": Bad vel_ned (not enough sats)!");
         else
         {
             float diff_lat, diff_lon, curr_lat, curr_lon;
@@ -110,8 +116,8 @@ void GotoWaypoint::run()
             diff_lon = cos(M_PI/180.0*target.latitude)*(target.longitude - gps_fix.longitude);
 
             // Current direction
-            curr_lat = gps_velned.n;
-            curr_lon = gps_velned.e;
+            curr_lat = gps_velned.vector.x;
+            curr_lon = gps_velned.vector.y;
 
             // normalize
             float dist = std::sqrt(diff_lat * diff_lat + diff_lon * diff_lon);
@@ -165,7 +171,8 @@ void GotoWaypoint::run()
 
 void GotoWaypoint::gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) { gps_fix = *msg; }
 void GotoWaypoint::waypointCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) { target = *msg; }
-void GotoWaypoint::gpsVelnedCallback(const piksi_rtk_msgs::VelNed::ConstPtr& msg) { gps_velned = *msg; }
+void GotoWaypoint::gpsStateCallback(const piksi_rtk_msgs::ReceiverState_V2_6_5::ConstPtr& msg) { gps_state = *msg; }
+void GotoWaypoint::gpsVelnedCallback(const geometry_msgs::Vector3Stamped::ConstPtr& msg) { gps_velned = *msg; }
 
 int main(int argc, char **argv)
 {

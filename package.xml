@@ -9,11 +9,11 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>sensor_msgs</build_depend>
-  <build_depend>piksi_multi_rtk_ros</build_depend>
+  <build_depend>piksi_multi_cpp</build_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>sensor_msgs</build_export_depend>
-  <build_export_depend>piksi_multi_rtk_ros</build_export_depend>
+  <build_export_depend>piksi_multi_cpp</build_export_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>piksi_multi_rtk_ros</exec_depend>
+  <exec_depend>piksi_multi_cpp</exec_depend>
 </package>

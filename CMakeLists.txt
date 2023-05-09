@@ -5,7 +5,7 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
-  piksi_multi_rtk_ros
+  piksi_multi_cpp
 )
 
 catkin_package()
