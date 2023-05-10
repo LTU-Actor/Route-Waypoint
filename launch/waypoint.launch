@@ -5,6 +5,7 @@
   <arg name="speed" default="1.5" />
   <arg name="reverse" default="false" />
   <arg name="gps_fix" default="/piksi/navsatfix_best_fix" />
+  <arg name="gps_state" default="/piksi/receiver_state" />
   <arg name="gps_vel_ned" default="/piksi/vel_ned" />
 
   <node name="waypoint" pkg="ltu_actor_route_waypoint" type="waypoint">
@@ -14,6 +15,7 @@
     <param name="speed" value="$(arg speed)"/>
     <param name="reverse" value="$(arg reverse)"/>
     <param name="gps_fix" value="$(arg gps_fix)"/>
+    <param name="gps_state" value="$(arg gps_state)"/>
     <param name="gps_vel_ned" value="$(arg gps_vel_ned)"/>
   </node>
 </launch>
