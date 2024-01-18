@@ -115,20 +115,44 @@ void GotoWaypoint::run()
             diff_lat = target.latitude - gps_fix.latitude;
             diff_lon = cos(M_PI/180.0*target.latitude)*(target.longitude - gps_fix.longitude);
 
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - diff_lat     : " << diff_lat);
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - diff_lon     : " << diff_lon);
+
             // Current direction
             curr_lat = gps_velned.vector.x;
             curr_lon = gps_velned.vector.y;
+
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - curr_lat     : " << curr_lat);
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - curr_lon     : " << curr_lon);
+
+            double kFromMilli = 1000;
+            curr_lat = gps_velned.vector.x * kFromMilli;
+            curr_lon = gps_velned.vector.y * kFromMilli;
+
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - curr_lat     : " << curr_lat);
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - curr_lon     : " << curr_lon);
+
 
             // normalize
             float dist = std::sqrt(diff_lat * diff_lat + diff_lon * diff_lon);
             diff_lat /= dist;
             diff_lon /= dist;
 
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - dist     : " << dist);
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - diff_lat     : " << diff_lat);
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - diff_lon     : " << diff_lon);
+
             float speed = std::sqrt(curr_lat * curr_lat + curr_lon * curr_lon);
             curr_lat /= speed;
             curr_lon /= speed;
 
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - speed     : " << speed);
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - curr_lat     : " << curr_lat);
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - curr_lon     : " << curr_lon);
+
             float velned_angle = atan2(curr_lat, curr_lon);
+
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - velned_angle     : " << velned_angle);
 
             // https://stackoverflow.com/a/21486462
             // atan2(2DCross(A,B), 2DDot(A,B));
@@ -138,6 +162,8 @@ void GotoWaypoint::run()
             //float angle = atan2(curr_lat, curr_lon) - atan2(diff_lat, diff_lon);
             //if (angle > 3.14159) angle -= 3.14159;
             //else if (angle < -3.14159) angle += 3.14159;
+
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - angle     : " << angle);
 
             if (std::isnan(angle)) angle = 0;
 
@@ -160,6 +186,9 @@ void GotoWaypoint::run()
                 command.angular.z = copysignf(scale, command.angular.z);
 
             if (reverse) command.angular.z *= -1;
+
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - command     : " << command);
+            ROS_ERROR_STREAM_THROTTLE(10, NODE_NAME " - angle_msg     : " << angle_msg);
 
             twist_pub.publish(command);
             debug_angle_pub.publish(angle_msg);
